@@ -66,6 +66,7 @@ model Incident {
   status         Status       @default(REPORTED)
   category       Category     @default(UNSURE)
   priority       Priority     @default(STANDARD)
+  upvotes        Int          @default(1)
   resolutionNote String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt

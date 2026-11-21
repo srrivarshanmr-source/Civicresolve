@@ -75,7 +75,7 @@ export function createApp({ db, verifyIdentity, transcribe, analyze }) {
 
   registerVoiceRoute(app, transcribe, express.raw)
   const json = express.json({ limit: '16kb' })
-  registerComplaintRoutes(app, db, staffOnly, express.json({ limit: '3mb' }))
+  registerComplaintRoutes(app, db, staffOnly, express.json({ limit: '3mb' }), analyze)
   registerTriageRoutes(app, db, staffOnly, json, analyze)
   registerAccountabilityRoutes(app, db, staffOnly, json)
   registerTransparencyRoutes(app, db)
