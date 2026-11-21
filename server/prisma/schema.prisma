@@ -1,0 +1,123 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OFFICER
+  SUPERVISOR
+}
+
+enum Status {
+  REPORTED
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum Priority {
+  LOW
+  STANDARD
+  HIGH
+}
+
+enum Category {
+  UNSURE
+  ROAD_DAMAGE
+  WATER_LEAKAGE
+  WASTE
+  STREETLIGHTING
+}
+
+model Department {
+  id              String       @id @default(uuid())
+  jurisdiction    String
+  code            String
+  headEmail       String
+  supervisorEmail String
+  assignments     Assignment[]
+  staff           StaffScope[]
+
+  @@unique([jurisdiction, code])
+}
+
+model Staff {
+  uid    String       @id
+  role   Role
+  scopes StaffScope[]
+}
+
+model StaffScope {
+  staffUid     String
+  departmentId String
+  staff        Staff      @relation(fields: [staffUid], references: [uid], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([staffUid, departmentId])
+}
+
+model Incident {
+  id             String       @id @default(uuid())
+  status         Status       @default(REPORTED)
+  category       Category     @default(UNSURE)
+  priority       Priority     @default(STANDARD)
+  resolutionNote String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  reports        Report[]
+  assignments    Assignment[]
+  events         AuditEvent[]
+}
+
+model Report {
+  id                 String   @id @default(uuid())
+  trackingReference  String   @unique
+  trackingTokenHash  String
+  title              String
+  description        String
+  location           String
+  language           String
+  category           Category @default(UNSURE)
+  photoObjectKey     String?
+  photoData          Bytes?
+  photoMime          String?
+  createdAt          DateTime @default(now())
+  incidentId         String
+  incident           Incident @relation(fields: [incidentId], references: [id])
+
+  @@index([incidentId])
+}
+
+model Assignment {
+  id             String     @id @default(uuid())
+  incidentId     String
+  departmentId   String
+  version        Int
+  assignedAt     DateTime   @default(now())
+  responseDueAt  DateTime
+  respondedAt    DateTime?
+  nextAction     String?
+  endedAt        DateTime?
+  incident       Incident   @relation(fields: [incidentId], references: [id])
+  department     Department @relation(fields: [departmentId], references: [id])
+
+  @@unique([incidentId, version])
+  @@index([departmentId, endedAt])
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  incidentId String
+  actorUid   String?
+  kind       String
+  details    Json
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id])
+
+  @@index([incidentId, createdAt])
+}

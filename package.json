@@ -1,0 +1,13 @@
+{
+  "name": "civicresolve",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server start",
+    "db:deploy": "npm --prefix server run db:deploy"
+  },
+  "dependencies": {
+    "@neon/config": "^1.14.6",
+    "@neon/env": "^2.1.9"
+  }
+}

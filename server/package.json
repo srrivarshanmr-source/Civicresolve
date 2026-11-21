@@ -1,0 +1,26 @@
+{
+  "name": "civicresolve-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import ./src/load-env.js --watch src/index.js",
+    "start": "node --import ./src/load-env.js src/index.js",
+    "build": "prisma generate",
+    "vercel-build": "prisma generate",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:deploy": "node --import ./src/load-env.js src/migrate.js",
+    "staff:grant": "node --import ./src/load-env.js src/grant-staff.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.0.0",
+    "google-auth-library": "10.9.1",
+    "prisma": "^6.19.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.0"
+  }
+}

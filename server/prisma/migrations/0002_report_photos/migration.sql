@@ -1,0 +1,1 @@
+ALTER TABLE "Report" ADD COLUMN "photoData" BYTEA, ADD COLUMN "photoMime" TEXT;
