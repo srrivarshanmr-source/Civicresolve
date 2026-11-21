@@ -30,9 +30,7 @@ const transcribe = process.env.GROQ_API_KEY
   ? createGroqTranscriber(process.env.GROQ_API_KEY)
   : undefined
 
-const analyze = process.env.GEMINI_API_KEY
-  ? createAnalyzer(process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL)
-  : undefined
+const analyze = createAnalyzer(process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL, process.env.GROQ_API_KEY)
 
 const prisma = getDb()
 const auth = getFirebaseAuth()

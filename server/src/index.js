@@ -29,7 +29,7 @@ await db.$connect()
 const auth = getAuth(initializeApp({ projectId: env.FIREBASE_PROJECT_ID, credential: applicationDefault() }))
 const transcribe = env.GROQ_API_KEY ? createGroqTranscriber(env.GROQ_API_KEY)
   : env.SPEECH_PROJECT_ID ? createTranscriber(env.SPEECH_PROJECT_ID) : undefined
-const analyze = createAnalyzer(env.GEMINI_API_KEY, env.GEMINI_MODEL)
+const analyze = createAnalyzer(env.GEMINI_API_KEY, env.GEMINI_MODEL, env.GROQ_API_KEY)
 startTriageWorker({ db, analyze })
 const app = createApp({
   db, verifyIdentity: token => auth.verifyIdToken(token, true), transcribe,
