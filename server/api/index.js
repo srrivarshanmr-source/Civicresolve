@@ -46,7 +46,7 @@ const app = createApp({
   verifyIdentity: token => auth.verifyIdToken(token),
   transcribe,
   analyze,
-  screenPhoto: createPhotoScreening(process.env.PHOTO_SCREEN_URL, process.env.PHOTO_SCREEN_TOKEN),
+  screenPhoto: createPhotoScreening(process.env.PHOTO_SCREEN_URL, process.env.PHOTO_SCREEN_TOKEN, process.env.GROQ_API_KEY),
 })
 
 export default app

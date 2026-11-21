@@ -37,7 +37,7 @@ startTriageWorker({ db, analyze })
 const app = createApp({
   db, verifyIdentity: token => auth.verifyIdToken(token, true), transcribe,
   analyze,
-  screenPhoto: createPhotoScreening(env.PHOTO_SCREEN_URL, env.PHOTO_SCREEN_TOKEN),
+  screenPhoto: createPhotoScreening(env.PHOTO_SCREEN_URL, env.PHOTO_SCREEN_TOKEN, env.GROQ_API_KEY),
 })
 startAccountabilityWorker({
   db, sendEmail: createResendSender(env.RESEND_API_KEY, env.RESEND_FROM, env.PUBLIC_SITE_URL),
