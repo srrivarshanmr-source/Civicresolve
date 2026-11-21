@@ -116,6 +116,7 @@ export default function Report() {
       })
 
       if (response.status === 413 || response.status === 415) throw new Error('photoInvalid')
+      if (response.status === 422 && (await response.json()).code === 'PHOTO_AI_REJECTED') throw new Error('photoAiRejected')
       if (!response.ok) throw new Error('reportFailed')
 
       // Save to localStorage so switching tabs or leaving the site preserves tracking!
@@ -131,7 +132,8 @@ export default function Report() {
 
       setReceipt(credentials)
     } catch (failure) {
-      setError(failure instanceof Error && failure.message === 'photoInvalid' ? 'photoInvalid' : 'reportFailed')
+      const message = failure instanceof Error ? failure.message : ''
+      setError(message === 'photoInvalid' || message === 'photoAiRejected' ? message : 'reportFailed')
     } finally {
       active.current = false
       setSending(false)

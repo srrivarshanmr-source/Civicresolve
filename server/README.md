@@ -31,6 +31,34 @@ Set GROQ_API_KEY as a backend secret to use hosted multilingual Whisper. This ta
 
 Set GEMINI_API_KEY to enable AI triage. In Staff dashboard, open an issue to review its category, urgency, department suggestion, and photo consistency. Staff can record a separate evidence decision and provenance finding with a source. Gemini photo consistency is not an image provenance detector.
 
+## Complaint photo screening
+
+The screening service in `photo-model/` uses the pretrained [Ateeqq SigLIP AI-image detector](https://huggingface.co/Ateeqq/ai-vs-human-image-detector/tree/60e82406916921b823616bee33397baab38af3f0) by default. It loads a fixed model revision at startup and scores the AI class from the model logits. A report is rejected before it enters the queue when the configured service returns an AI score strictly greater than 0.5. At 0.5 or below, with no photo, or if the service is unavailable, the normal reporting flow continues. The score estimates image origin and cannot establish whether the reported incident occurred.
+
+From `server/photo-model`, install and start the pretrained service:
+
+```sh
+python -m pip install -r requirements.txt
+# Set PHOTO_SCREEN_TOKEN to a shared secret.
+python -m uvicorn serve:app --host 0.0.0.0 --port 8000
+```
+
+The first launch downloads the model weights from Hugging Face. Set `PHOTO_SCREEN_URL` to the hosted HTTPS `/screen` endpoint and `PHOTO_SCREEN_TOKEN` to the same secret in the complaint API environment. Uploaded image bytes are sent to that service. The pretrained model has no measured false rejection rate on CivicResolve photos.
+
+### Optional training on civic photos
+
+Build a CSV with columns `path,origin,category,group,split`. Paths are relative to the CSV. Use `real` and `ai` for origin and `train`, `val`, and `test` for split. Include both origins for each topic in all three splits. Keep photos of the same incident or capture session together. Keep near duplicates together and hold out entire camera sources and generators for testing. Match the scenes, framing, and compression of real and synthetic images so file format and subject matter do not proxy for the label.
+
+Public sources to curate include [RDD2022](https://github.com/sekilab/RoadDamageDetector) for roads, the [pipeline leakage image collection](https://github.com/lonlonago/Pipeline-Water-Leak-Detection-Dataset-2727-imagesVOC-YOLO-format) for visibly leaking pipes, [TACO](https://github.com/pedropro/TACO) for outdoor waste, and [GenImage](https://github.com/GenImage-Dataset/GenImage) for public AI-generated and real photos. Check individual licenses and origin labels, and add documented generator outputs for civic subjects that the public synthetic dataset does not cover.
+
+From `server/photo-model`:
+
+```sh
+python train.py path/to/manifest.csv path/to/civic-photo.pt
+```
+
+Training writes a metrics JSON next to the checkpoint with held-out false rejection and AI detection rates overall and by category. To use that checkpoint, set `PHOTO_MODEL_PATH` before starting the screening service.
+
 Use Prisma Studio from server (npm exec -- prisma studio) to add Department rows. Set jurisdiction to the ward label, code to ROADS, WATER, WASTE, or LIGHTS, and enter the configured head and supervisor inboxes. The admin assigns a department and response deadline in the staff dashboard. A department response requires a next action. Unanswered cases escalate automatically after the deadline.
 
 Set RESEND_API_KEY and RESEND_FROM to enable real emails and PUBLIC_SITE_URL for the staff workspace link. Use a sender configured in Resend. With no email adapter, assignments and escalation events are recorded and emails stay queued. Run one continuously available Node service for the demo so deadline checks can run.

@@ -27,7 +27,7 @@ function requireStaff(db, verifyIdentity) {
   }
 }
 
-export function createApp({ db, verifyIdentity, transcribe, analyze }) {
+export function createApp({ db, verifyIdentity, transcribe, analyze, screenPhoto }) {
   const app = express()
   app.disable('x-powered-by')
   const staffOnly = requireStaff(db, verifyIdentity)
@@ -75,7 +75,7 @@ export function createApp({ db, verifyIdentity, transcribe, analyze }) {
 
   registerVoiceRoute(app, transcribe, express.raw)
   const json = express.json({ limit: '16kb' })
-  registerComplaintRoutes(app, db, staffOnly, express.json({ limit: '3mb' }), analyze)
+  registerComplaintRoutes(app, db, staffOnly, express.json({ limit: '3mb' }), analyze, screenPhoto)
   registerTriageRoutes(app, db, staffOnly, json, analyze)
   registerAccountabilityRoutes(app, db, staffOnly, json)
   registerTransparencyRoutes(app, db)

@@ -6,7 +6,7 @@ import { createGroqTranscriber } from '../src/speech.js'
 import { createAnalyzer } from '../src/triage.js'
 import { createResendSender } from '../src/review.js'
 import { startAccountabilityWorker } from '../src/accountability.js'
-import { startTriageWorker } from '../src/triage.js'
+import { createPhotoScreening } from '../src/photo-screening.js'
 
 // Prisma client - reused across warm invocations
 let db
@@ -35,7 +35,6 @@ const analyze = createAnalyzer(process.env.GEMINI_API_KEY, process.env.GEMINI_MO
 const prisma = getDb()
 const auth = getFirebaseAuth()
 
-startTriageWorker({ db: prisma, analyze })
 startAccountabilityWorker({
   db: prisma,
   sendEmail: createResendSender(process.env.RESEND_API_KEY, process.env.RESEND_FROM, process.env.PUBLIC_SITE_URL),
@@ -47,6 +46,7 @@ const app = createApp({
   verifyIdentity: token => auth.verifyIdToken(token),
   transcribe,
   analyze,
+  screenPhoto: createPhotoScreening(process.env.PHOTO_SCREEN_URL, process.env.PHOTO_SCREEN_TOKEN),
 })
 
 export default app

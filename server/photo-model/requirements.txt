@@ -1,0 +1,6 @@
+torch
+torchvision
+Pillow
+fastapi
+uvicorn
+transformers>=4.51,<5

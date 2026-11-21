@@ -46,7 +46,7 @@ const deptCodeMap = {
   'STREETLIGHTING': 'LIGHTS',
 }
 
-export function registerComplaintRoutes(app, db, staffOnly, json, analyze) {
+export function registerComplaintRoutes(app, db, staffOnly, json, analyze, screenPhoto) {
   // Public Feed of Reports for Citizens
   app.get('/api/public/incidents', async (_req, res) => {
     try {
@@ -169,6 +169,25 @@ export function registerComplaintRoutes(app, db, staffOnly, json, analyze) {
     const photoMime = photoData ? identifyPhoto(photoData) : null
     if (photoData && !photoMime) return res.sendStatus(415)
 
+    if (photoData && screenPhoto) {
+      const prior = await db.report.findUnique({
+        where: { trackingReference: reference }, select: { trackingTokenHash: true },
+      })
+      if (prior) {
+        if (!matchesTrackingToken(token, prior.trackingTokenHash)) return res.sendStatus(409)
+        return res.json({ reference })
+      }
+
+      try {
+        const result = await screenPhoto({ bytes: photoData, mimeType: photoMime })
+        if (result.aiProbability > 0.5) {
+          return res.status(422).json({ code: 'PHOTO_AI_REJECTED' })
+        }
+      } catch (error) {
+        console.warn('Photo screening unavailable:', error.name)
+      }
+    }
+
     let createdIncident
     try {
       createdIncident = await db.incident.create({
@@ -205,7 +224,7 @@ export function registerComplaintRoutes(app, db, staffOnly, json, analyze) {
     if (analyze && createdIncident) {
       const incidentId = createdIncident.id
       const reportId = createdIncident.reports[0]?.id
-      Promise.resolve().then(async () => {
+      await (async () => {
         try {
           const triage = await analyze({
             title,
@@ -291,7 +310,7 @@ export function registerComplaintRoutes(app, db, staffOnly, json, analyze) {
         } catch (autoErr) {
           console.warn('Auto-triage background execution warning:', autoErr.message)
         }
-      })
+      })()
     }
 
     res.status(201).json({ reference })

@@ -6,6 +6,7 @@ import { createApp } from './app.js'
 import { createGroqTranscriber, createTranscriber } from './speech.js'
 import express from 'express'
 import { createAnalyzer, startTriageWorker } from './triage.js'
+import { createPhotoScreening } from './photo-screening.js'
 import { startAccountabilityWorker } from './accountability.js'
 import { createResendSender } from './review.js'
 import { fileURLToPath } from 'node:url'
@@ -20,6 +21,8 @@ const env = z.object({
   RESEND_FROM: z.string().min(1).optional(),
   PUBLIC_SITE_URL: z.string().url().optional(),
   GROQ_API_KEY: z.string().min(1).optional(),
+  PHOTO_SCREEN_URL: z.string().url().optional(),
+  PHOTO_SCREEN_TOKEN: z.string().min(1).optional(),
   HOST: z.string().default('127.0.0.1'),
   SPEECH_PROJECT_ID: z.string().min(1).optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
@@ -34,6 +37,7 @@ startTriageWorker({ db, analyze })
 const app = createApp({
   db, verifyIdentity: token => auth.verifyIdToken(token, true), transcribe,
   analyze,
+  screenPhoto: createPhotoScreening(env.PHOTO_SCREEN_URL, env.PHOTO_SCREEN_TOKEN),
 })
 startAccountabilityWorker({
   db, sendEmail: createResendSender(env.RESEND_API_KEY, env.RESEND_FROM, env.PUBLIC_SITE_URL),
