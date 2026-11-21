@@ -182,6 +182,16 @@ const en = {
   drainageIssue: 'Drainage Issue',
   wasteManagement: 'Waste Management',
   otherIssue: 'Other Issue',
+  citizenLogin: 'Citizen Login',
+  citizenAccount: 'Citizen Account',
+  officerLogin: 'Officer / Staff Portal',
+  helplineText: 'Toll-Free Helpline: 1800-425-0000 (24x7)',
+  nationalGrievance: 'Public Infrastructure Grievance Redressal System',
+  fileGrievance: 'File a Grievance',
+  trackGrievance: 'Track Grievance',
+  myGrievances: 'My Grievances',
+  syncWithGoogle: 'Sign in with Google to sync your complaints across all your devices.',
+  officialPortalNotice: 'Authorized Government Officials & Ward Engineers Only',
 }
 const ta: Record<keyof typeof en, string> = {
   ACCOUNTABILITY_EMAIL: 'துறைக்கான அறிவிப்பு',
@@ -364,6 +374,16 @@ const ta: Record<keyof typeof en, string> = {
   drainageIssue: 'வடிகால் பிரச்சினை',
   wasteManagement: 'கழிவு மேலாண்மை',
   otherIssue: 'இதர பிரச்சினை',
+  citizenLogin: 'குடிமக்கள் உள்நுழைவு',
+  citizenAccount: 'குடிமக்கள் கணக்கு',
+  officerLogin: 'அதிகாரிகள் தளம்',
+  helplineText: 'இலவச உதவி எண்: 1800-425-0000 (24x7)',
+  nationalGrievance: 'அரசு பொதுமக்கள் குறைதீர்க்கும் தளம்',
+  fileGrievance: 'புகார் பதிவு',
+  trackGrievance: 'நிலையை அறிதல்',
+  myGrievances: 'எனது புகார்கள்',
+  syncWithGoogle: 'உங்கள் புகார்களை அனைத்து சாதனங்களிலும் காண Google மூலம் உள்நுழையவும்.',
+  officialPortalNotice: 'அங்கீகரிக்கப்பட்ட அரசு அலுவலர்கள் மற்றும் பொறியாளர்கள் மட்டும்',
 }
 export async function initializeLanguage() {
   let language = 'en'

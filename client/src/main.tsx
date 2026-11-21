@@ -6,7 +6,8 @@ import {
   Activity, Building2, ClipboardPen, Globe2, House, Search, ShieldCheck,
   ArrowRight, LayoutDashboard, LogOut, Navigation, Camera,
   ThumbsUp, CheckCircle2, Clock3, Inbox, Sparkles, MapPin, Radio,
-  Droplets, Wrench, AlertTriangle, Trash2, Lightbulb, Waves, ArrowUpRight
+  Droplets, Wrench, AlertTriangle, Trash2, Lightbulb, Waves, User, Phone,
+  X, ExternalLink, ShieldAlert, FileText, Check
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { initializeLanguage, selectLanguage } from './i18n'
@@ -20,20 +21,147 @@ import PublicDashboard from './PublicDashboard'
 import CommunityFeed from './CommunityFeed'
 import './style.css'
 
-const pages = [
-  { path: '/', label: 'home', Icon: House },
-  { path: '/report', label: 'report', info: 'reportInfo', Icon: ClipboardPen },
-  { path: '/track', label: 'track', info: 'trackInfo', Icon: Search },
-  { path: '/community', label: 'communityReports', info: 'publicInfo', Icon: ThumbsUp },
-  { path: '/public', label: 'public', info: 'publicInfo', Icon: Activity },
-]
+function CitizenModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { t } = useTranslation()
+  const { user, signIn, signOut, signing } = useAuth()
+  const [reports, setReports] = useState<StoredReport[]>([])
+  const navigate = useNavigate()
 
-function Overview() {
+  useEffect(() => {
+    if (isOpen) {
+      setReports(getLocalReports())
+    }
+  }, [isOpen])
+
+  if (!isOpen) return null
+
+  return (
+    <div className="gov-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="gov-modal-card" onClick={e => e.stopPropagation()}>
+        <div className="gov-modal-header">
+          <div className="gov-modal-title">
+            <User size={20} className="modal-icon-blue" />
+            <div>
+              <h3>{t('citizenAccount')}</h3>
+              <p className="modal-subtext">Citizen Grievance Redressal Service</p>
+            </div>
+          </div>
+          <button type="button" className="gov-modal-close" onClick={onClose} aria-label="Close">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="gov-modal-body">
+          {/* User Sign In / Profile Box */}
+          <div className="citizen-auth-box">
+            {user ? (
+              <div className="citizen-signed-in">
+                <div className="citizen-avatar">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="Profile" />
+                  ) : (
+                    <User size={24} />
+                  )}
+                </div>
+                <div className="citizen-details">
+                  <strong>{user.displayName || 'Citizen User'}</strong>
+                  <span className="citizen-email">{user.email}</span>
+                  <span className="citizen-badge">Verified Citizen</span>
+                </div>
+                <button
+                  type="button"
+                  className="gov-btn-outline-danger"
+                  onClick={() => void signOut()}
+                >
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="citizen-sign-prompt">
+                <div className="prompt-text">
+                  <strong>Sign in with your Citizen Account</strong>
+                  <p>{t('syncWithGoogle')}</p>
+                </div>
+                <button
+                  type="button"
+                  className="gov-btn-primary"
+                  onClick={() => void signIn()}
+                  disabled={signing}
+                >
+                  {signing ? t('loading') : t('signIn')}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* List of Filed Grievances */}
+          <div className="citizen-reports-section">
+            <div className="citizen-section-header">
+              <h4>{t('myGrievances')} ({reports.length})</h4>
+              <Link to="/report" onClick={onClose} className="link-action">
+                + {t('fileGrievance')}
+              </Link>
+            </div>
+
+            {reports.length === 0 ? (
+              <div className="empty-reports-state">
+                <Inbox size={36} className="empty-icon" />
+                <p>{t('noMyReports')}</p>
+                <Link to="/report" onClick={onClose} className="gov-btn-primary small-btn">
+                  {t('fileGrievance')}
+                </Link>
+              </div>
+            ) : (
+              <div className="citizen-reports-list">
+                {reports.map(r => (
+                  <div key={r.reference} className="citizen-report-item">
+                    <div className="report-item-main">
+                      <div className="report-item-header">
+                        <span className={`status-pill pill-${r.status.toLowerCase()}`}>
+                          {t(r.status) || r.status}
+                        </span>
+                        <code className="report-ref-badge">{r.reference}</code>
+                      </div>
+                      <h5 className="report-item-title">{r.title}</h5>
+                      <div className="report-item-meta">
+                        <span><MapPin size={12} /> {r.location}</span>
+                        <span><Clock3 size={12} /> {new Date(r.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="gov-btn-secondary small-btn"
+                      onClick={() => {
+                        onClose()
+                        navigate(`/track#${new URLSearchParams({ ref: r.reference, token: r.token })}`)
+                      }}
+                    >
+                      Track <ArrowRight size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="gov-modal-footer">
+          <span className="footer-notice">Need help? Dial 1800-425-0000 (Toll-Free 24x7)</span>
+          <button type="button" className="gov-btn-secondary" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Overview({ onOpenCitizen }: { onOpenCitizen: () => void }) {
   const { t, i18n } = useTranslation()
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Quick report state on Home Page
+  // Quick report state
   const [selectedCat, setSelectedCat] = useState('ROAD_DAMAGE')
   const [quickTitle, setQuickTitle] = useState('')
   const [quickLocation, setQuickLocation] = useState('')
@@ -42,8 +170,9 @@ function Overview() {
   const [locating, setLocating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [quickSuccess, setQuickSuccess] = useState<StoredReport | null>(null)
+  const [quickError, setQuickError] = useState('')
 
-  // Quick tracking state on Home Page
+  // Quick tracking state
   const [trackRef, setTrackRef] = useState('')
 
   function fetchGps() {
@@ -63,6 +192,7 @@ function Overview() {
     e.preventDefault()
     if (!quickTitle.trim() || !quickLocation.trim() || !quickDesc.trim()) return
     setSubmitting(true)
+    setQuickError('')
     try {
       const reference = 'CR-' + Array.from(crypto.getRandomValues(new Uint8Array(8)), byte => byte.toString(16).padStart(2, '0')).join('').toUpperCase()
       const token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')
@@ -91,6 +221,14 @@ function Overview() {
         }),
       })
 
+      if (res.status === 422) {
+        const body = await res.json().catch(() => ({}))
+        if (body.code === 'PHOTO_AI_REJECTED') {
+          setQuickError(t('photoAiRejected'))
+          return
+        }
+      }
+
       if (res.ok) {
         const stored: StoredReport = {
           reference,
@@ -103,76 +241,95 @@ function Overview() {
         }
         saveReportToLocal(stored)
         setQuickSuccess(stored)
+      } else {
+        setQuickError(t('reportFailed'))
       }
     } catch (err) {
       console.warn('Quick submit failed:', err)
+      setQuickError(t('reportFailed'))
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="gov-home-container">
-      {/* Admin Status Banner if logged in */}
+    <div className="gov-page-container">
+      {/* Official Government Officer Bar if logged in */}
       {user && (
-        <div className="admin-status-banner">
-          <div className="admin-banner-content">
-            <ShieldCheck size={18} className="admin-banner-icon" />
-            <span>Signed in as <strong>{user.email}</strong> (Municipal Administrator)</span>
+        <div className="gov-staff-notice-bar">
+          <div className="notice-left">
+            <ShieldCheck size={18} className="shield-green" />
+            <span>Logged in as Official Administrator: <strong>{user.email}</strong></span>
           </div>
-          <Link to="/staff" className="admin-banner-btn">
-            Open Admin Command Center <ArrowRight size={15} />
+          <Link to="/staff" className="gov-staff-portal-link">
+            Open Municipal Staff Console <ArrowRight size={14} />
           </Link>
         </div>
       )}
 
-      {/* Hero Banner with Kerala Infrastructure Styling */}
-      <section className="gov-hero-section">
-        <div className="gov-hero-content">
-          <span className="gov-badge-pill">
-            <Building2 size={15} /> {t('governmentPortal')}
-          </span>
-          <h1>Report Civic Issues<br /><span className="gradient-text">Build a Better Community</span></h1>
-          <p>
-            Report problems like damaged roads, water leakage, streetlight issues, drainage, and waste management. Track live updates and upvote community repairs.
+      {/* Official Dignified Hero Section */}
+      <section className="gov-portal-hero">
+        <div className="gov-hero-inner">
+          <div className="gov-hero-badge">
+            <Building2 size={15} />
+            <span>{t('nationalGrievance')}</span>
+          </div>
+          <h1 className="gov-hero-heading">
+            Public Infrastructure & Civic Grievance Portal
+          </h1>
+          <p className="gov-hero-desc">
+            Direct municipal redressal for road maintenance, clean water supply, streetlights, drainage, and waste management. Submit issues with authentic photo verification and track real-time resolution.
           </p>
 
-          <div className="hero-action-buttons">
-            <a href="#report-section" className="button primary orange-btn">
-              <ClipboardPen size={18} /> {t('report')} <ArrowRight size={16} />
+          <div className="gov-hero-actions">
+            <a href="#file-grievance" className="gov-btn-primary large">
+              <ClipboardPen size={18} /> {t('fileGrievance')}
             </a>
-            <a href="#track-section" className="button secondary dark-ghost-btn">
-              <Search size={18} /> {t('track')}
+            <a href="#track-grievance" className="gov-btn-secondary large">
+              <Search size={18} /> {t('trackGrievance')}
             </a>
+            <button type="button" onClick={onOpenCitizen} className="gov-btn-light large">
+              <User size={18} /> {t('myGrievances')}
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Dual Interactive Modules: Left (Report a Problem) & Right (Track Your Complaint) */}
-      <div className="gov-modules-row">
-        {/* Module 1: Report a Problem */}
-        <div id="report-section" className="gov-module-card">
-          <div className="module-title-bar">
-            <ClipboardPen size={22} className="module-accent-icon" />
-            <h2>Report a Problem</h2>
+      {/* Quick Services Row: File Grievance (Left) & Track Grievance (Right) */}
+      <div className="gov-grid-2col">
+        {/* Left Card: File Grievance */}
+        <section id="file-grievance" className="gov-card">
+          <div className="gov-card-header">
+            <div className="card-header-icon bg-blue">
+              <ClipboardPen size={20} />
+            </div>
+            <div>
+              <h2>{t('fileGrievance')}</h2>
+              <p className="gov-card-subtitle">Submit details of the civic issue for department action</p>
+            </div>
           </div>
 
           {quickSuccess ? (
-            <div className="quick-success-box">
-              <CheckCircle2 size={42} className="success-green-icon" />
+            <div className="gov-success-card">
+              <CheckCircle2 size={48} className="icon-success" />
               <h3>{t('reportSaved')}!</h3>
-              <p>Reference ID: <strong>{quickSuccess.reference}</strong></p>
-              <p className="success-subtext">Saved to <strong>My Reports</strong> on this device. You can track progress anytime.</p>
-              <div className="quick-success-actions">
+              <div className="gov-receipt-chip">
+                <span>{t('reference')}:</span>
+                <strong>{quickSuccess.reference}</strong>
+              </div>
+              <p className="success-instruction">
+                Your grievance has been registered and dispatched to the department. Automatically saved to <strong>My Grievances</strong> on this device.
+              </p>
+              <div className="success-btn-group">
                 <Link
                   to={`/track#${new URLSearchParams({ ref: quickSuccess.reference, token: quickSuccess.token })}`}
-                  className="button primary"
+                  className="gov-btn-primary"
                 >
-                  Track Live Status
+                  Track Status Now
                 </Link>
                 <button
                   type="button"
-                  className="button secondary"
+                  className="gov-btn-secondary"
                   onClick={() => {
                     setQuickSuccess(null)
                     setQuickTitle('')
@@ -181,117 +338,139 @@ function Overview() {
                     setQuickPhoto(null)
                   }}
                 >
-                  Report Another Issue
+                  Submit Another
                 </button>
               </div>
             </div>
           ) : (
-            <div className="report-module-body">
-              {/* Category Grid as in Reference Image */}
-              <div className="category-tiles-grid">
+            <div className="gov-form-wrapper">
+              {quickError && (
+                <div className="gov-alert-error" role="alert">
+                  <AlertTriangle size={18} />
+                  <span>{quickError}</span>
+                </div>
+              )}
+
+              {/* Category Selector Grid */}
+              <div className="gov-label-heading">{t('category')}:</div>
+              <div className="gov-cat-grid">
                 <button
                   type="button"
-                  className={`cat-tile ${selectedCat === 'ROAD_DAMAGE' ? 'selected' : ''}`}
+                  className={`gov-cat-btn ${selectedCat === 'ROAD_DAMAGE' ? 'active' : ''}`}
                   onClick={() => setSelectedCat('ROAD_DAMAGE')}
                 >
-                  <Wrench size={24} />
+                  <Wrench size={20} />
                   <span>{t('damagedRoad')}</span>
                 </button>
 
                 <button
                   type="button"
-                  className={`cat-tile ${selectedCat === 'WATER_LEAKAGE' ? 'selected' : ''}`}
+                  className={`gov-cat-btn ${selectedCat === 'WATER_LEAKAGE' ? 'active' : ''}`}
                   onClick={() => setSelectedCat('WATER_LEAKAGE')}
                 >
-                  <Droplets size={24} />
+                  <Droplets size={20} />
                   <span>{t('waterLeakage')}</span>
                 </button>
 
                 <button
                   type="button"
-                  className={`cat-tile ${selectedCat === 'STREETLIGHTING' ? 'selected' : ''}`}
+                  className={`gov-cat-btn ${selectedCat === 'STREETLIGHTING' ? 'active' : ''}`}
                   onClick={() => setSelectedCat('STREETLIGHTING')}
                 >
-                  <Lightbulb size={24} />
+                  <Lightbulb size={20} />
                   <span>{t('streetlightIssue')}</span>
                 </button>
 
                 <button
                   type="button"
-                  className={`cat-tile ${selectedCat === 'DRAINAGE' ? 'selected' : ''}`}
+                  className={`gov-cat-btn ${selectedCat === 'WASTE' ? 'active' : ''}`}
                   onClick={() => setSelectedCat('WASTE')}
                 >
-                  <Waves size={24} />
-                  <span>{t('drainageIssue')}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`cat-tile ${selectedCat === 'WASTE' ? 'selected' : ''}`}
-                  onClick={() => setSelectedCat('WASTE')}
-                >
-                  <Trash2 size={24} />
+                  <Trash2 size={20} />
                   <span>{t('wasteManagement')}</span>
                 </button>
 
                 <button
                   type="button"
-                  className={`cat-tile ${selectedCat === 'UNSURE' ? 'selected' : ''}`}
+                  className={`gov-cat-btn ${selectedCat === 'DRAINAGE' ? 'active' : ''}`}
+                  onClick={() => setSelectedCat('DRAINAGE')}
+                >
+                  <Waves size={20} />
+                  <span>{t('drainageIssue')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`gov-cat-btn ${selectedCat === 'UNSURE' ? 'active' : ''}`}
                   onClick={() => setSelectedCat('UNSURE')}
                 >
-                  <AlertTriangle size={24} />
+                  <AlertTriangle size={20} />
                   <span>{t('otherIssue')}</span>
                 </button>
               </div>
 
-              {/* Embedded Complaint Submission Form */}
-              <form onSubmit={handleQuickSubmit} className="quick-submit-form">
-                <div className="form-row">
+              {/* Grievance Submission Inputs */}
+              <form onSubmit={handleQuickSubmit} className="gov-form">
+                <div className="gov-form-field">
+                  <label htmlFor="quick-title">{t('title')} *</label>
                   <input
+                    id="quick-title"
                     type="text"
                     required
-                    placeholder="Problem Title (e.g. Deep pothole on main road)"
+                    placeholder="Brief title (e.g. Major pothole near market entrance)"
                     value={quickTitle}
                     onChange={e => setQuickTitle(e.target.value)}
-                    className="gov-input"
+                    className="gov-text-input"
                   />
                 </div>
 
-                <div className="form-row loc-row">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter Location / Landmark"
-                    value={quickLocation}
-                    onChange={e => setQuickLocation(e.target.value)}
-                    className="gov-input"
-                  />
-                  <button
-                    type="button"
-                    onClick={fetchGps}
-                    className="gps-target-btn"
-                    title={t('useGps')}
-                    disabled={locating}
-                  >
-                    <Navigation size={17} className={locating ? 'animate-spin' : ''} />
-                  </button>
+                <div className="gov-form-field">
+                  <label htmlFor="quick-location">{t('location')} *</label>
+                  <div className="gov-input-group">
+                    <input
+                      id="quick-location"
+                      type="text"
+                      required
+                      placeholder="Street name, landmark, or ward number"
+                      value={quickLocation}
+                      onChange={e => setQuickLocation(e.target.value)}
+                      className="gov-text-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={fetchGps}
+                      className="gov-gps-button"
+                      title={t('useGps')}
+                      disabled={locating}
+                    >
+                      <Navigation size={16} className={locating ? 'animate-spin' : ''} />
+                      <span>{locating ? 'Detecting…' : 'GPS'}</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="form-row">
+                <div className="gov-form-field">
+                  <label htmlFor="quick-desc">{t('description')} *</label>
                   <textarea
-                    rows={2}
+                    id="quick-desc"
+                    rows={3}
                     required
-                    placeholder="Describe the complaint in detail..."
+                    placeholder="Provide details about the issue to assist field engineers..."
                     value={quickDesc}
                     onChange={e => setQuickDesc(e.target.value)}
-                    className="gov-input"
+                    className="gov-textarea"
                   />
                 </div>
 
-                <div className="form-row photo-upload-box">
-                  <label className="photo-label">
-                    <Camera size={18} />
-                    <span>{quickPhoto ? quickPhoto.name : t('uploadEvidence')}</span>
+                <div className="gov-form-field">
+                  <label className="gov-photo-picker">
+                    <div className="photo-picker-inner">
+                      <Camera size={20} />
+                      <div className="photo-picker-text">
+                        <strong>{quickPhoto ? quickPhoto.name : t('uploadEvidence')}</strong>
+                        <small>Only authentic camera photos. AI-generated images are strictly detected and rejected.</small>
+                      </div>
+                    </div>
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -303,7 +482,7 @@ function Overview() {
 
                 <button
                   type="submit"
-                  className="button primary orange-btn full-width"
+                  className="gov-btn-success full-width"
                   disabled={submitting}
                 >
                   {submitting ? t('sending') : `${t('submitComplaint')} →`}
@@ -311,117 +490,146 @@ function Overview() {
               </form>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Module 2: Track Your Complaint */}
-        <div id="track-section" className="gov-module-card">
-          <div className="module-title-bar">
-            <Search size={22} className="module-accent-icon" />
-            <h2>Track Your Complaint</h2>
+        {/* Right Card: Track Grievance Status */}
+        <section id="track-grievance" className="gov-card">
+          <div className="gov-card-header">
+            <div className="card-header-icon bg-green">
+              <Search size={20} />
+            </div>
+            <div>
+              <h2>{t('trackGrievance')}</h2>
+              <p className="gov-card-subtitle">Check real-time department response and resolution timeline</p>
+            </div>
           </div>
 
-          <div className="track-module-body">
-            <div className="track-input-group">
+          <div className="gov-track-body">
+            <div className="gov-track-input-cluster">
               <input
                 type="text"
                 placeholder="Enter Complaint ID (e.g. CR-F730B229...)"
                 value={trackRef}
                 onChange={e => setTrackRef(e.target.value)}
-                className="gov-input"
+                className="gov-text-input"
               />
               <button
                 type="button"
-                className="button primary orange-btn"
+                className="gov-btn-primary"
                 onClick={() => {
                   if (trackRef.trim()) {
                     navigate(`/track#${new URLSearchParams({ ref: trackRef.trim() })}`)
                   }
                 }}
               >
-                Track
+                Track Status
               </button>
             </div>
 
-            {/* Visual Stepper as in Reference Image */}
-            <div className="stepper-container">
-              <h3>Complaint Status</h3>
-              <div className="gov-stepper">
-                <div className="gov-step completed">
-                  <div className="gov-step-icon"><CheckCircle2 size={16} /></div>
-                  <span className="step-name">Registered</span>
+            {/* Official 4-Stage Redressal Stepper */}
+            <div className="gov-timeline-stepper">
+              <h3 className="stepper-title">Standard Redressal Timeline</h3>
+              <div className="official-steps">
+                <div className="step-item step-completed">
+                  <div className="step-circle"><Check size={14} /></div>
+                  <span className="step-label">1. Registered</span>
                 </div>
-                <div className="gov-step-connector completed"></div>
+                <div className="step-line step-active"></div>
 
-                <div className="gov-step completed">
-                  <div className="gov-step-icon"><Clock3 size={16} /></div>
-                  <span className="step-name">Under Review</span>
+                <div className="step-item step-completed">
+                  <div className="step-circle"><Clock3 size={14} /></div>
+                  <span className="step-label">2. Under Review</span>
                 </div>
-                <div className="gov-step-connector"></div>
+                <div className="step-line"></div>
 
-                <div className="gov-step">
-                  <div className="gov-step-icon"><Wrench size={16} /></div>
-                  <span className="step-name">In Progress</span>
+                <div className="step-item">
+                  <div className="step-circle"><Wrench size={14} /></div>
+                  <span className="step-label">3. In Progress</span>
                 </div>
-                <div className="gov-step-connector"></div>
+                <div className="step-line"></div>
 
-                <div className="gov-step">
-                  <div className="gov-step-icon"><CheckCircle2 size={16} /></div>
-                  <span className="step-name">Resolved</span>
+                <div className="step-item">
+                  <div className="step-circle"><CheckCircle2 size={14} /></div>
+                  <span className="step-label">4. Resolved</span>
                 </div>
               </div>
             </div>
 
-            {/* My Reports Quick Links */}
-            <div className="home-my-reports-box">
-              <div className="my-reports-title">
-                <strong>{t('myReports')}</strong>
-                <Link to="/track" className="view-all-link">Manage All →</Link>
+            {/* Quick My Reports Box on Home */}
+            <div className="gov-saved-reports-box">
+              <div className="saved-header">
+                <strong>{t('myGrievances')} on This Device</strong>
+                <button type="button" onClick={onOpenCitizen} className="link-action">
+                  View All ({getLocalReports().length}) →
+                </button>
               </div>
-              <SavedReportsQuickList />
+              <HomeSavedReportsList />
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* Live Updates Banner (Section 3 as in Reference Image) */}
-      <section className="live-updates-section">
-        <div className="live-updates-heading">
-          <Radio size={20} className="pulse-red-icon" />
-          <h2>{t('liveUpdates')}</h2>
+      {/* Section 3: Live Department Status & Field Works */}
+      <section className="gov-live-section">
+        <div className="section-title-strip">
+          <div className="strip-title">
+            <Radio size={18} className="live-dot-icon" />
+            <h2>{t('liveUpdates')} — Ongoing Works</h2>
+          </div>
+          <span className="strip-badge">Official Municipal Feeds</span>
         </div>
 
-        <div className="live-updates-cards">
-          <div className="live-update-card">
-            <div className="live-card-badge status-in_progress">In Progress</div>
-            <h3>Road Repair Work in Progress</h3>
-            <p>Pothole repair on MG Road / Avinashi Road is underway by the municipal road engineering team.</p>
-            <div className="live-card-meta">
-              <span><MapPin size={13} /> Coimbatore Central</span>
-              <span><Clock3 size={13} /> Updated 20 mins ago</span>
+        <div className="gov-works-grid">
+          <div className="gov-work-card">
+            <div className="work-card-top">
+              <span className="status-pill pill-in_progress">In Progress</span>
+              <span className="work-dept">Road Engineering</span>
+            </div>
+            <h4>Road Surface Milling & Pothole Patching</h4>
+            <p>Patching deep road craters on Avinashi Road and Cross-Cut Road sector.</p>
+            <div className="work-meta">
+              <span><MapPin size={12} /> Ward 12, Central Zone</span>
+              <span><Clock3 size={12} /> Updated 25 mins ago</span>
             </div>
           </div>
 
-          <div className="live-update-card">
-            <div className="live-card-badge status-resolved">Resolved</div>
-            <h3>Water Main Pipe Replacement</h3>
-            <p>Main water pipeline leak at Sector 14 successfully sealed and pressure restored.</p>
-            <div className="live-card-meta">
-              <span><MapPin size={13} /> Ward 7 North</span>
-              <span><Clock3 size={13} /> Completed today</span>
+          <div className="gov-work-card">
+            <div className="work-card-top">
+              <span className="status-pill pill-resolved">Resolved</span>
+              <span className="work-dept">Water Works Dept</span>
+            </div>
+            <h4>Main Supply Pipe Valve Restoration</h4>
+            <p>Underground pipe leakage sealed, municipal water pressure restored to 400 households.</p>
+            <div className="work-meta">
+              <span><MapPin size={12} /> Ward 24, North Division</span>
+              <span><Clock3 size={12} /> Completed today</span>
+            </div>
+          </div>
+
+          <div className="gov-work-card">
+            <div className="work-card-top">
+              <span className="status-pill pill-in_progress">In Progress</span>
+              <span className="work-dept">Electrical Division</span>
+            </div>
+            <h4>High-Mast Streetlight Repair</h4>
+            <p>Transformer junction repaired, LED luminaire units replaced along Main Bus Route.</p>
+            <div className="work-meta">
+              <span><MapPin size={12} /> Sector 8 Junction</span>
+              <span><Clock3 size={12} /> Field crew active</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Recent Complaints & Community Voting Feed (Section 4) */}
-      <section className="community-voting-section">
+      {/* Section 4: Public Community Feed */}
+      <section className="gov-community-section">
         <CommunityFeed limit={6} />
       </section>
     </div>
   )
 }
 
-function SavedReportsQuickList() {
+function HomeSavedReportsList() {
   const [reports, setReports] = useState<StoredReport[]>([])
 
   useEffect(() => {
@@ -429,20 +637,20 @@ function SavedReportsQuickList() {
   }, [])
 
   if (!reports.length) {
-    return <p className="no-reports-text">No reports submitted from this device yet.</p>
+    return <p className="no-items-note">No complaints registered from this browser yet.</p>
   }
 
   return (
-    <div className="home-saved-list">
+    <div className="home-saved-cards">
       {reports.map(r => (
         <Link
           key={r.reference}
           to={`/track#${new URLSearchParams({ ref: r.reference, token: r.token })}`}
-          className="home-saved-item"
+          className="saved-mini-card"
         >
-          <div>
+          <div className="saved-mini-info">
             <strong>{r.title}</strong>
-            <small>{r.reference}</small>
+            <small>{r.reference} • {new Date(r.createdAt).toLocaleDateString()}</small>
           </div>
           <ArrowRight size={14} />
         </Link>
@@ -454,38 +662,55 @@ function SavedReportsQuickList() {
 function Shell({ staff = false }: { staff?: boolean }) {
   const { t, i18n } = useTranslation()
   const { user, signOut } = useAuth()
+  const [citizenOpen, setCitizenOpen] = useState(false)
 
   if (staff) {
     return (
-      <div className="staff-shell">
+      <div className="gov-app-wrapper">
         <a className="skip-link" href="#main-content">{t('skipNavigation')}</a>
-        <header className="staff-header">
-          <div className="staff-header-left">
-            <Link to="/staff" className="brand">
-              <span className="brand-icon"><ShieldCheck size={22}/></span>
-              <span className="brand-text">CivicResolve</span>
-            </Link>
-            <span className="staff-portal-badge">{t('adminConsole')}</span>
+
+        {/* Official Staff Top Strip */}
+        <div className="gov-tricolor-bar"></div>
+        <header className="gov-official-header">
+          <div className="official-header-left">
+            <div className="gov-official-seal">
+              <ShieldCheck size={24} />
+            </div>
+            <div className="official-titles">
+              <span className="official-dept-title">Government Administrative Console</span>
+              <strong className="official-portal-title">CivicResolve Official Command Center</strong>
+            </div>
           </div>
 
-          <div className="staff-header-right">
-            <Link to="/" className="switch-view-btn" title="View Citizen Portal">
+          <div className="official-header-right">
+            <Link to="/" className="gov-btn-outline-light">
               <Building2 size={16} />
-              <span>{t('citizenView')}</span>
+              <span>Citizen Portal</span>
             </Link>
 
-            <div className="languages" role="group" aria-label={t('language')}>
-              <Globe2 size={16} aria-hidden="true"/>
-              <button type="button" lang="ta" aria-pressed={i18n.language === 'ta'} onClick={() => void selectLanguage('ta')}>தமிழ்</button>
-              <button type="button" lang="en" aria-pressed={i18n.language === 'en'} onClick={() => void selectLanguage('en')}>English</button>
+            <div className="gov-lang-group">
+              <button
+                type="button"
+                className={i18n.language === 'ta' ? 'active' : ''}
+                onClick={() => void selectLanguage('ta')}
+              >
+                தமிழ்
+              </button>
+              <button
+                type="button"
+                className={i18n.language === 'en' ? 'active' : ''}
+                onClick={() => void selectLanguage('en')}
+              >
+                English
+              </button>
             </div>
 
             {user && (
-              <div className="admin-user-pill">
-                <span className="user-email-text" title={user.email ?? ''}>{user.email}</span>
+              <div className="official-user-badge">
+                <span className="official-user-email">{user.email}</span>
                 <button
                   type="button"
-                  className="admin-logout-btn"
+                  className="official-logout-btn"
                   title={t('signOut')}
                   onClick={() => void signOut()}
                 >
@@ -496,74 +721,174 @@ function Shell({ staff = false }: { staff?: boolean }) {
           </div>
         </header>
 
-        <div className="staff-layout">
-          <main id="main-content" tabIndex={-1} className="staff-main-content">
-            <Outlet/>
-          </main>
-        </div>
+        <main id="main-content" tabIndex={-1} className="gov-staff-body">
+          <Outlet />
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="gov-citizen-shell">
+    <div className="gov-app-wrapper">
       <a className="skip-link" href="#main-content">{t('skipNavigation')}</a>
 
-      {/* Top Government Navigation Header matching Reference Image */}
-      <header className="gov-header">
-        <div className="gov-brand-cluster">
-          <Link to="/" className="gov-brand">
-            <div className="gov-emblem-wrapper">
-              <Building2 size={24} />
-            </div>
-            <div className="gov-brand-titles">
-              <span className="gov-sub">{t('governmentPortal')}</span>
-              <strong className="gov-title">CivicResolve</strong>
-            </div>
-          </Link>
-        </div>
+      {/* 1. Indian Government National / State Tricolor Accent Bar */}
+      <div className="gov-tricolor-bar"></div>
 
-        <nav className="gov-top-nav" aria-label={t('navigation')}>
-          <NavLink to="/" end><House size={16} /> {t('home')}</NavLink>
-          <NavLink to="/track"><Search size={16} /> {t('track')}</NavLink>
-          <NavLink to="/community"><ThumbsUp size={16} /> {t('communityReports')}</NavLink>
-          <NavLink to="/public"><Activity size={16} /> {t('public')}</NavLink>
-        </nav>
-
-        <div className="gov-header-actions">
-          <div className="languages" role="group" aria-label={t('language')}>
-            <Globe2 size={15} aria-hidden="true"/>
-            <button type="button" lang="ta" aria-pressed={i18n.language === 'ta'} onClick={() => void selectLanguage('ta')}>தமிழ்</button>
-            <button type="button" lang="en" aria-pressed={i18n.language === 'en'} onClick={() => void selectLanguage('en')}>English</button>
+      {/* 2. Official Utility & Helpline Header Bar */}
+      <div className="gov-utility-bar">
+        <div className="utility-inner">
+          <div className="utility-left">
+            <span className="utility-badge">Official Portal</span>
+            <span className="utility-text">{t('nationalGrievance')}</span>
+            <span className="utility-divider">|</span>
+            <span className="utility-helpline"><Phone size={13} /> {t('helplineText')}</span>
           </div>
 
-          <Link to="/staff" className="gov-login-btn">
-            <ShieldCheck size={16} />
-            <span>{user ? t('adminConsole') : 'Staff Login'}</span>
+          <div className="utility-right">
+            <div className="gov-lang-group">
+              <Globe2 size={14} className="globe-icon" />
+              <button
+                type="button"
+                className={i18n.language === 'ta' ? 'active' : ''}
+                onClick={() => void selectLanguage('ta')}
+              >
+                தமிழ்
+              </button>
+              <button
+                type="button"
+                className={i18n.language === 'en' ? 'active' : ''}
+                onClick={() => void selectLanguage('en')}
+              >
+                English
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Main Government Header with Clean Navigation & Distinct Logins */}
+      <header className="gov-main-header">
+        <div className="gov-header-inner">
+          {/* Brand Seal & Titles */}
+          <Link to="/" className="gov-brand-link">
+            <div className="gov-national-seal">
+              <Building2 size={24} />
+            </div>
+            <div className="gov-brand-copy">
+              <span className="gov-state-name">{t('governmentPortal')}</span>
+              <strong className="gov-system-title">CivicResolve</strong>
+            </div>
           </Link>
+
+          {/* Primary Navigation Menu */}
+          <nav className="gov-nav-menu" aria-label="Main Navigation">
+            <NavLink to="/" end className={({ isActive }) => `gov-nav-item ${isActive ? 'active' : ''}`}>
+              <House size={16} /> <span>{t('home')}</span>
+            </NavLink>
+            <NavLink to="/report" className={({ isActive }) => `gov-nav-item ${isActive ? 'active' : ''}`}>
+              <ClipboardPen size={16} /> <span>{t('fileGrievance')}</span>
+            </NavLink>
+            <NavLink to="/track" className={({ isActive }) => `gov-nav-item ${isActive ? 'active' : ''}`}>
+              <Search size={16} /> <span>{t('trackGrievance')}</span>
+            </NavLink>
+            <NavLink to="/community" className={({ isActive }) => `gov-nav-item ${isActive ? 'active' : ''}`}>
+              <ThumbsUp size={16} /> <span>{t('communityReports')}</span>
+            </NavLink>
+            <NavLink to="/public" className={({ isActive }) => `gov-nav-item ${isActive ? 'active' : ''}`}>
+              <Activity size={16} /> <span>{t('public')}</span>
+            </NavLink>
+          </nav>
+
+          {/* Distinct User and Staff Actions */}
+          <div className="gov-actions-cluster">
+            {/* Distinct Citizen Login / Account Button */}
+            <button
+              type="button"
+              className="gov-citizen-btn"
+              onClick={() => setCitizenOpen(true)}
+              title="Open Citizen Account & My Reports"
+            >
+              <User size={16} />
+              <span>{user ? user.displayName || 'My Account' : t('citizenLogin')}</span>
+              {getLocalReports().length > 0 && (
+                <span className="citizen-count-chip">{getLocalReports().length}</span>
+              )}
+            </button>
+
+            {/* Distinct Official / Department Staff Login */}
+            <Link
+              to="/staff"
+              className="gov-officer-btn"
+              title="Official Administrative & Department Console"
+            >
+              <ShieldCheck size={16} />
+              <span>{user ? 'Admin Console' : t('officerLogin')}</span>
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main id="main-content" tabIndex={-1}>
-        <Outlet/>
+      {/* Main Page Content */}
+      <main id="main-content" tabIndex={-1} className="gov-main-canvas">
+        <Outlet />
       </main>
+
+      {/* Clean Official Footer */}
+      <footer className="gov-portal-footer">
+        <div className="footer-inner">
+          <div className="footer-col">
+            <div className="footer-brand">
+              <Building2 size={20} />
+              <strong>CivicResolve Grievance Redressal</strong>
+            </div>
+            <p>An official public service system for civic infrastructure monitoring, road maintenance, streetlight repairs, sanitation, and municipal complaint resolution.</p>
+          </div>
+
+          <div className="footer-col">
+            <h5>Quick Services</h5>
+            <ul className="footer-links">
+              <li><Link to="/report">{t('fileGrievance')}</Link></li>
+              <li><Link to="/track">{t('trackGrievance')}</Link></li>
+              <li><Link to="/community">{t('communityReports')}</Link></li>
+              <li><Link to="/public">{t('public')}</Link></li>
+            </ul>
+          </div>
+
+          <div className="footer-col">
+            <h5>Grievance Redressal Helpline</h5>
+            <p><strong>Toll-Free Helpline:</strong> 1800-425-0000</p>
+            <p><strong>Operating Hours:</strong> 24x7 Citizen Assistance</p>
+            <p><strong>Official Escalation:</strong> Automated 72-Hour Departmental SLA</p>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span>Designed & Maintained for Public Civic Redressal • Standards Compliant</span>
+          <span>Security & AI Image Verification Enabled</span>
+        </div>
+      </footer>
+
+      {/* Citizen Account & Grievances Modal */}
+      <CitizenModal isOpen={citizenOpen} onClose={() => setCitizenOpen(false)} />
     </div>
   )
 }
 
 function App() {
+  const [citizenOpen, setCitizenOpen] = useState(false)
+
   return (
     <Routes>
-      <Route element={<Shell/>}>
-        <Route path="/" element={<Overview/>}/>
-        <Route path="/report" element={<Report/>}/>
-        <Route path="/track" element={<Tracking/>}/>
-        <Route path="/community" element={<CommunityFeed/>}/>
-        <Route path="/public" element={<PublicDashboard/>}/>
-        <Route path="*" element={<Overview/>}/>
+      <Route element={<Shell />}>
+        <Route path="/" element={<Overview onOpenCitizen={() => setCitizenOpen(true)} />} />
+        <Route path="/report" element={<Report />} />
+        <Route path="/track" element={<Tracking />} />
+        <Route path="/community" element={<CommunityFeed />} />
+        <Route path="/public" element={<PublicDashboard />} />
+        <Route path="*" element={<Overview onOpenCitizen={() => setCitizenOpen(true)} />} />
       </Route>
-      <Route element={<Shell staff/>}>
-        <Route path="/staff" element={<Staff/>}/>
+      <Route element={<Shell staff />}>
+        <Route path="/staff" element={<Staff />} />
       </Route>
     </Routes>
   )
@@ -573,7 +898,7 @@ void initializeLanguage().then(() => {
   createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
-        <App/>
+        <App />
       </AuthProvider>
     </BrowserRouter>
   )
