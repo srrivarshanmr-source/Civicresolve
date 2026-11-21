@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Activity, Building2, MapPin } from 'lucide-react'
 import { apiUrl } from './api'
 
 type Metrics = {
@@ -64,33 +65,34 @@ export default function PublicDashboard() {
   function renderTable(rows: Array<Metrics | DepartmentMetrics>, byDepartment: boolean) {
     const heading = byDepartment ? copy.departments : copy.wards
     const headingId = byDepartment ? 'public-department-heading' : 'public-ward-heading'
+    const Icon = byDepartment ? Building2 : MapPin
 
-    return <section aria-labelledby={headingId}>
-      <h2 id={headingId}>{heading}</h2>
+    return <section className="dashboard-card" aria-labelledby={headingId}>
+      <h2 id={headingId}><Icon size={20} aria-hidden="true"/>{heading}</h2>
       {rows.length === 0 ? <p className="notice">{copy.empty}</p> :
-        <div style={{ overflowX: 'auto' }} role="region" tabIndex={0} aria-labelledby={headingId}>
-          <table aria-labelledby={headingId} style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'start' }}>
+        <div className="metrics-scroll" role="region" tabIndex={0} aria-labelledby={headingId}>
+          <table className="metrics-table" aria-labelledby={headingId}>
             <thead><tr>
-              <th scope="col" style={cellStyle}>{copy.ward}</th>
-              {byDepartment && <th scope="col" style={cellStyle}>{copy.department}</th>}
-              <th scope="col" style={cellStyle}>{copy.total}</th>
-              <th scope="col" style={cellStyle}>{t('REPORTED')}</th>
-              <th scope="col" style={cellStyle}>{t('IN_PROGRESS')}</th>
-              <th scope="col" style={cellStyle}>{t('RESOLVED')}</th>
-              <th scope="col" style={cellStyle}>{copy.onTime}</th>
-              <th scope="col" style={cellStyle}>{copy.escalations}</th>
+              <th scope="col">{copy.ward}</th>
+              {byDepartment && <th scope="col">{copy.department}</th>}
+              <th scope="col">{copy.total}</th>
+              <th scope="col">{t('REPORTED')}</th>
+              <th scope="col">{t('IN_PROGRESS')}</th>
+              <th scope="col">{t('RESOLVED')}</th>
+              <th scope="col">{copy.onTime}</th>
+              <th scope="col">{copy.escalations}</th>
             </tr></thead>
             <tbody>{rows.map(row => {
               const department = 'department' in row ? row.department : null
               return <tr key={JSON.stringify([row.ward, department])}>
-                <th scope="row" style={cellStyle}>{row.ward ?? copy.unknown}</th>
-                {byDepartment && <td style={cellStyle}>{department ?? copy.unassigned}</td>}
-                <td style={cellStyle}>{row.total === null ? '—' : number.format(row.total)}</td>
-                <td style={cellStyle}>{row.statuses ? number.format(row.statuses.reported) : '—'}</td>
-                <td style={cellStyle}>{row.statuses ? number.format(row.statuses.inProgress) : '—'}</td>
-                <td style={cellStyle}>{row.statuses ? number.format(row.statuses.resolved) : '—'}</td>
-                <td style={cellStyle}>{row.onTimeFirstResponseRate == null ? '—' : percent.format(row.onTimeFirstResponseRate)}</td>
-                <td style={cellStyle}>{row.escalations == null ? '—' : number.format(row.escalations)}</td>
+                <th scope="row">{row.ward ?? copy.unknown}</th>
+                {byDepartment && <td>{department ?? copy.unassigned}</td>}
+                <td>{row.total === null ? '—' : number.format(row.total)}</td>
+                <td>{row.statuses ? number.format(row.statuses.reported) : '—'}</td>
+                <td>{row.statuses ? number.format(row.statuses.inProgress) : '—'}</td>
+                <td>{row.statuses ? number.format(row.statuses.resolved) : '—'}</td>
+                <td>{row.onTimeFirstResponseRate == null ? '—' : percent.format(row.onTimeFirstResponseRate)}</td>
+                <td>{row.escalations == null ? '—' : number.format(row.escalations)}</td>
               </tr>
             })}</tbody>
           </table>
@@ -98,9 +100,14 @@ export default function PublicDashboard() {
     </section>
   }
 
-  return <section className="panel staff-panel">
-    <h1>{t('public')}</h1>
-    <p>{copy.attribution}</p>
+  return <section className="dashboard public-dashboard">
+    <div className="dashboard-heading">
+      <div>
+        <span className="dashboard-icon"><Activity size={24} aria-hidden="true"/></span>
+        <h1>{t('public')}</h1>
+        <p>{t('publicInfo')}</p>
+      </div>
+    </div>
     {state.kind === 'loading' && <p role="status">{t('loading')}</p>}
     {state.kind === 'error' && <>
       <p className="notice" role="alert">{copy.unavailable}</p>
@@ -110,12 +117,13 @@ export default function PublicDashboard() {
       }}>{copy.retry}</button>
     </>}
     {state.kind === 'ready' && <>
-      <p className="notice">{copy.privacy(number.format(state.data.minimumCount))}</p>
-      <p>{copy.responseDefinition}</p>
       {renderTable(state.data.wards, false)}
       {renderTable(state.data.departments, true)}
+      <div className="dashboard-notes">
+        <p>{copy.attribution}</p>
+        <p>{copy.responseDefinition}</p>
+        <p>{copy.privacy(number.format(state.data.minimumCount))}</p>
+      </div>
     </>}
   </section>
 }
-
-const cellStyle = { padding: '10px 12px', textAlign: 'start', borderBottom: '1px solid var(--line)' } as const
