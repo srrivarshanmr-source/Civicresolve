@@ -27,7 +27,7 @@ function requireStaff(db, verifyIdentity) {
   }
 }
 
-export function createApp({ db, verifyIdentity, transcribe, analyze, screenPhoto }) {
+export function createApp({ db, verifyIdentity, transcribe, analyze }) {
   const app = express()
   app.disable('x-powered-by')
   const staffOnly = requireStaff(db, verifyIdentity)
@@ -55,32 +55,38 @@ export function createApp({ db, verifyIdentity, transcribe, analyze, screenPhoto
       where: { trackingReference: reference },
       select: {
         trackingReference: true, trackingTokenHash: true, title: true, createdAt: true,
-        incident: { select: {
-          status: true, category: true, resolutionNote: true, updatedAt: true,
-          assignments: { where: { endedAt: null }, take: 1, select: {
-            responseDueAt: true, respondedAt: true, department: { select: { code: true, jurisdiction: true } },
-          } },
-          events: {
-            where: { kind: { in: ['ASSIGNED', 'ASSIGNMENT_RESPONDED', 'ASSIGNMENT_ESCALATED', 'STATUS_CHANGED', 'EVIDENCE_REVIEWED', 'CITIZEN_APPEALED'] } },
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 30,
-            select: { kind: true, createdAt: true, details: true },
-          },
-        } },
+        incident: {
+          select: {
+            status: true, category: true, resolutionNote: true, updatedAt: true,
+            assignments: {
+              where: { endedAt: null }, take: 1, select: {
+                responseDueAt: true, respondedAt: true, department: { select: { code: true, jurisdiction: true } },
+              }
+            },
+            events: {
+              where: { kind: { in: ['ASSIGNED', 'ASSIGNMENT_RESPONDED', 'ASSIGNMENT_ESCALATED', 'STATUS_CHANGED', 'EVIDENCE_REVIEWED', 'CITIZEN_APPEALED'] } },
+              orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 30,
+              select: { kind: true, createdAt: true, details: true },
+            },
+          }
+        },
       },
     })
     if (!report || !matchesTrackingToken(token, report.trackingTokenHash)) return res.sendStatus(404)
     const { trackingTokenHash, ...summary } = report
     const { events = [], assignments = [], ...incident } = summary.incident
     const evidence = events.find(event => event.kind === 'EVIDENCE_REVIEWED')?.details ?? null
-    res.json({ ...summary, incident: {
-      ...incident, assignment: assignments[0] ?? null, evidence: evidence ? { status: evidence.status } : null,
-      timeline: events.map(({ kind, createdAt }) => ({ kind, createdAt })),
-    } })
+    res.json({
+      ...summary, incident: {
+        ...incident, assignment: assignments[0] ?? null, evidence: evidence ? { status: evidence.status } : null,
+        timeline: events.map(({ kind, createdAt }) => ({ kind, createdAt })),
+      }
+    })
   })
 
   registerVoiceRoute(app, transcribe, express.raw)
   const json = express.json({ limit: '16kb' })
-  registerComplaintRoutes(app, db, staffOnly, express.json({ limit: '3mb' }), analyze, screenPhoto)
+  registerComplaintRoutes(app, db, staffOnly, express.json({ limit: '3mb' }), analyze)
   registerTriageRoutes(app, db, staffOnly, json, analyze)
   registerAccountabilityRoutes(app, db, staffOnly, json)
   registerTransparencyRoutes(app, db)
