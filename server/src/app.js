@@ -35,7 +35,7 @@ export function createApp({ db, verifyIdentity, transcribe, analyze }) {
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store')
     res.set('Access-Control-Allow-Origin', '*')
-    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     if (req.method === 'OPTIONS') return res.sendStatus(204)
     next()
