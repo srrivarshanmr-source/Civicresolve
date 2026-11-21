@@ -125,10 +125,16 @@ export default function CommunityFeed({ limit = 30 }: { limit?: number }) {
                     <Sparkles size={13} /> {t('communityPriority')}
                   </span>
                 )}
-                {inc.isAiGenerated && (
-                  <span className="ai-flag-pill" title="Synthetic photo flagged">
-                    <ShieldAlert size={13} /> AI Photo Flagged
-                  </span>
+                {inc.hasPhoto && (
+                  inc.isAiGenerated ? (
+                    <span className="ai-flag-pill red" title="Synthetic photo flagged">
+                      <ShieldAlert size={13} /> AI Photo Detected
+                    </span>
+                  ) : (
+                    <span className="ai-flag-pill green" title="Authentic camera photo verified">
+                      <CheckCircle2 size={13} /> Verified Camera Photo
+                    </span>
+                  )
                 )}
               </div>
 

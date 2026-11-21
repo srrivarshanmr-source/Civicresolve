@@ -180,8 +180,12 @@ export function registerComplaintRoutes(app, db, staffOnly, json, analyze, scree
 
       try {
         const result = await screenPhoto({ bytes: photoData, mimeType: photoMime })
-        if (result && (result.aiProbability > 0.5 || result.isAiGenerated)) {
-          return res.status(422).json({ code: 'PHOTO_AI_REJECTED' })
+        if (result && (result.aiProbability >= 0.45 || result.isAiGenerated)) {
+          return res.status(422).json({
+            code: 'PHOTO_AI_REJECTED',
+            reason: result.explanation || 'AI-generated or synthetic image detected',
+            aiProbability: result.aiProbability
+          })
         }
       } catch (error) {
         console.warn('Photo screening error:', error.message)
